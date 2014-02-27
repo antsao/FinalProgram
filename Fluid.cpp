@@ -33,8 +33,6 @@ GLuint triBuffObj;
 GLuint colBuffObj;
 GLuint normalBuffObj;
 
-RenderingHelper ModelTrans;
-
 int shade = 1;
 int ShadeProg;
 int mouseStartX;
