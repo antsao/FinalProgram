@@ -1,3 +1,5 @@
+//WHY
+
 struct Material {
   vec3 aColor;
   vec3 dColor;
