@@ -16,6 +16,8 @@
 #include <GL\glut.h>
 #endif
 
+#include <time.h>
+#include <cmath>
 #include <stdlib.h>
 #include <stdio.h>
 #include <cmath>
@@ -163,7 +165,7 @@ int InstallShader(const GLchar *vShaderName, const GLchar *fShaderName) {
 }
 
 void initPart() {
-   particle = GeometryCreator::CreateSphere(glm::vec3(1.0f));
+   particle = GeometryCreator::CreateSphere(glm::vec3(0.2f));
 }   
 
 void InitGeom() {
@@ -172,6 +174,10 @@ void InitGeom() {
 }
 
 void Initialize() {
+        ModelTrans.useModelViewMatrix();
+        ModelTrans.loadIdentity();
+        printf("here\n");
+
 	glClearColor(1, 1, 1, 1.0f);
 	glEnable(GL_DEPTH_TEST);
 }
@@ -196,18 +202,28 @@ void Draw() {
   beta += (mouseEndX - mouseStartX) * PI / g_width;
   mouseStartX = mouseEndX;
   mouseStartY = mouseEndY;
+  
+  ModelTrans.loadIdentity();
   //SetMaterial();
-  safe_glUniform3f(h_uColor, 0, 0, 1);
-  safe_glEnableVertexAttribArray(h_aPosition);
-  glBindBuffer(GL_ARRAY_BUFFER, particle->PositionHandle);
-  safe_glVertexAttribPointer(h_aPosition, 3, GL_FLOAT, GL_FALSE, 0, 0);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, particle->IndexHandle);
+  int randNum;
 
-  glDrawElements(GL_TRIANGLES, particle->IndexBufferLength, GL_UNSIGNED_SHORT, 0);
 
-  // Disable the shader and attributes
-  safe_glDisableVertexAttribArray(h_aPosition);
-  safe_glDisableVertexAttribArray(h_aNormal);
+  for(float i = 0; i < 1000; i+=0.5) { 
+     ModelTrans.pushMatrix();
+        ModelTrans.translate(vec3(i, 0, 0));
+        SetModel();
+        safe_glUniform3f(h_uColor, 0, 0, 1);
+        safe_glEnableVertexAttribArray(h_aPosition);
+        glBindBuffer(GL_ARRAY_BUFFER, particle->PositionHandle);
+        safe_glVertexAttribPointer(h_aPosition, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, particle->IndexHandle);
+
+        glDrawElements(GL_TRIANGLES, particle->IndexBufferLength, GL_UNSIGNED_SHORT, 0);
+        // Disable the shader and attributes
+        safe_glDisableVertexAttribArray(h_aPosition);
+        //safe_glDisableVertexAttribArray(h_aNormal);
+     ModelTrans.popMatrix();
+  }
   glUseProgram(0);
   glutSwapBuffers();
 }
