@@ -23,6 +23,8 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
+#include "GeometryCreator.h"
+#include "MStackHelp.h"
 
 using namespace std;
 using namespace glm;
@@ -32,6 +34,8 @@ using namespace glm;
 GLuint triBuffObj;
 GLuint colBuffObj;
 GLuint normalBuffObj;
+
+RenderingHelper ModelTrans;
 
 int shade = 1;
 int ShadeProg;
@@ -49,6 +53,8 @@ vec3 wVector = vec3(0, 0, 0);
 vec3 uVector = vec3(0, 0, 0);
 vec4 directionLight = vec4(0, 0, 0, 0);
 
+Mesh *particle;
+
 GLint h_aPosition;
 GLint h_aNormal;
 GLint h_uModelMatrix;
@@ -60,6 +66,7 @@ GLint h_uMatAmb;
 GLint h_uMatDif;
 GLint h_uMatSpec;
 GLint h_uMatShine;
+GLint h_uColor;
 
 void SetProjectionMatrix() {
   mat4 Projection = perspective(90.0f, (float)g_width/g_height, 0.1f, 100.f);
@@ -80,10 +87,10 @@ void SetView() {
 }
 
 void SetModel() {
-  if (directionLight.x == 0 && directionLight.y == 0 && directionLight.z == 0) {
+  /*if (directionLight.x == 0 && directionLight.y == 0 && directionLight.z == 0) {
     directionLight = ModelTrans.modelViewMatrix * vec4(0, 0, -2, 1);
     directionLight = vec4(10, 10, 4, 1) - directionLight;
-  }
+  }*/
   safe_glUniformMatrix4fv(h_uModelMatrix, glm::value_ptr(ModelTrans.modelViewMatrix));
 }
 
@@ -145,16 +152,22 @@ int InstallShader(const GLchar *vShaderName, const GLchar *fShaderName) {
   h_uProjMatrix = safe_glGetUniformLocation(ShadeProg, "uProjMatrix");
   h_uViewMatrix = safe_glGetUniformLocation(ShadeProg, "uViewMatrix");
   h_uModelMatrix = safe_glGetUniformLocation(ShadeProg, "uModelMatrix");
-  h_uMatAmb = safe_glGetUniformLocation(ShadeProg, "uMat.aColor");
+  h_uColor = safe_glGetUniformLocation(ShadeProg, "uColor");
+  /*h_uMatAmb = safe_glGetUniformLocation(ShadeProg, "uMat.aColor");
   h_uMatDif = safe_glGetUniformLocation(ShadeProg, "uMat.dColor");
   h_uMatSpec = safe_glGetUniformLocation(ShadeProg, "uMat.sColor");
   h_uMatShine = safe_glGetUniformLocation(ShadeProg, "uMat.shine");
-  h_lightPos = safe_glGetUniformLocation(ShadeProg, "lightPos");
+  h_lightPos = safe_glGetUniformLocation(ShadeProg, "lightPos");*/
   h_cameraPos = safe_glGetUniformLocation(ShadeProg, "cameraPos");
   return 1;
 }
 
+void initPart() {
+   particle = GeometryCreator::CreateSphere(glm::vec3(1.0f));
+}   
+
 void InitGeom() {
+  initPart();
   // TODO: Initialize the points, and put them into housekeeping structs to use with CUDA
 }
 
@@ -183,6 +196,14 @@ void Draw() {
   beta += (mouseEndX - mouseStartX) * PI / g_width;
   mouseStartX = mouseEndX;
   mouseStartY = mouseEndY;
+  //SetMaterial();
+  safe_glUniform3f(h_uColor, 0, 0, 1);
+  safe_glEnableVertexAttribArray(h_aPosition);
+  glBindBuffer(GL_ARRAY_BUFFER, particle->PositionHandle);
+  safe_glVertexAttribPointer(h_aPosition, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, particle->IndexHandle);
+
+  glDrawElements(GL_TRIANGLES, particle->IndexBufferLength, GL_UNSIGNED_SHORT, 0);
 
   // Disable the shader and attributes
   safe_glDisableVertexAttribArray(h_aPosition);
