@@ -38,7 +38,8 @@ GLuint colBuffObj;
 GLuint normalBuffObj;
 
 RenderingHelper ModelTrans;
-
+bool moveDown = false;
+int moveY = 0;
 int shade = 1;
 int ShadeProg;
 int mouseStartX;
@@ -49,7 +50,7 @@ float g_width;
 float g_height;
 float alpha = 0;
 float beta = -PI / 2;
-vec3 eyePos = vec3(0, 0, 0);
+vec3 eyePos = vec3(0, 0, 100);
 vec3 lookAtPt = vec3(0, 0, 0);
 vec3 wVector = vec3(0, 0, 0);
 vec3 uVector = vec3(0, 0, 0);
@@ -180,8 +181,9 @@ void Initialize() {
   glEnable(GL_DEPTH_TEST);
 }
 
-void Draw() {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+void Draw() { 
+  //const int t = glutGet(GLUT_ELAPSED_TIME) % 10;
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glUseProgram(ShadeProg);
   SetProjectionMatrix();
   SetView();
@@ -203,10 +205,22 @@ void Draw() {
   
   ModelTrans.loadIdentity();
   //SetMaterial();
+  if (moveY == 5) {
+     moveDown = true;
+  }
+  else if (moveY == -5){
+     moveDown = false;
+  }
+  if(moveDown) {
+     moveY --;
+  }
+  else {
+     moveY ++;
+  }
 
   for(float i = -500; i < 500; i+=0.5) { 
     ModelTrans.pushMatrix();
-      ModelTrans.translate(vec3(i, 0, 0));
+      ModelTrans.translate(vec3(i, moveY, 0));
       SetModel();
       safe_glUniform3f(h_uColor, 0, 0, 1);
       safe_glEnableVertexAttribArray(h_aPosition);
@@ -274,10 +288,15 @@ void keyboard(unsigned char key, int x, int y ) {
   glutPostRedisplay();
 }
 
+void update(int val) {
+   glutPostRedisplay();
+   glutTimerFunc(100, update, 0);
+}
+
 int main(int argc, char *argv[]) {
   glutInit(&argc, argv);
   glutInitWindowPosition(200, 200);
-  glutInitWindowSize(400, 400);
+  glutInitWindowSize(1000, 1000);
   glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
   glutCreateWindow("Fluid");
   glutReshapeFunc(ReshapeGL);
@@ -285,6 +304,7 @@ int main(int argc, char *argv[]) {
   glutKeyboardFunc(keyboard);
   glutMouseFunc(Mouse);
   glutMotionFunc(MouseDrag);
+  glutTimerFunc(100, update, 0);
   g_width = g_height = 200;
   #ifdef _WIN32
     GLenum err = glewInit();
