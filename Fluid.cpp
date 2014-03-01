@@ -38,8 +38,10 @@ GLuint colBuffObj;
 GLuint normalBuffObj;
 
 RenderingHelper ModelTrans;
-bool moveDown = false;
-int moveY = 0;
+int particleCount = 1;
+float particleYPos = 50;
+float particleXPos = -50;
+float particleZPos = 50;
 int shade = 1;
 int ShadeProg;
 int mouseStartX;
@@ -167,7 +169,7 @@ int InstallShader(const GLchar *vShaderName, const GLchar *fShaderName) {
 
 void initPart() {
    particle = GeometryCreator::CreateSphere(glm::vec3(0.2f));
-}   
+}
 
 void InitGeom() {
   initPart();
@@ -181,8 +183,7 @@ void Initialize() {
   glEnable(GL_DEPTH_TEST);
 }
 
-void Draw() { 
-  //const int t = glutGet(GLUT_ELAPSED_TIME) % 10;
+void Draw() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glUseProgram(ShadeProg);
   SetProjectionMatrix();
@@ -202,25 +203,27 @@ void Draw() {
   beta += (mouseEndX - mouseStartX) * PI / g_width;
   mouseStartX = mouseEndX;
   mouseStartY = mouseEndY;
-  
+
   ModelTrans.loadIdentity();
   //SetMaterial();
-  if (moveY == 5) {
-     moveDown = true;
-  }
-  else if (moveY == -5){
-     moveDown = false;
-  }
-  if(moveDown) {
-     moveY --;
-  }
-  else {
-     moveY ++;
-  }
-
-  for(float i = -500; i < 500; i+=0.5) { 
+  for(int i = 0; i < 125000; i++) {
     ModelTrans.pushMatrix();
-      ModelTrans.translate(vec3(i, moveY, 0));
+      if (particleCount % 101 == 0) {
+        particleZPos = 50;
+        if (particleXPos != 50) {
+          particleXPos++;
+        }
+        else {
+          particleXPos = -50;
+          particleYPos--;
+          particleZPos = 50;
+        }
+      }
+      else {
+        particleZPos--;
+      }
+      particleCount++;
+      ModelTrans.translate(vec3(particleXPos, particleYPos, particleZPos));
       SetModel();
       safe_glUniform3f(h_uColor, 0, 0, 1);
       safe_glEnableVertexAttribArray(h_aPosition);
@@ -234,6 +237,10 @@ void Draw() {
       //safe_glDisableVertexAttribArray(h_aNormal);
     ModelTrans.popMatrix();
   }
+  particleZPos = 50;
+  particleXPos = -50;
+  particleYPos = 50;
+  particleCount = 1;
   glUseProgram(0);
   glutSwapBuffers();
 }

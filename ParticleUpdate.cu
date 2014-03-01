@@ -31,9 +31,9 @@ __global__ void updateParticleKernel(Particle *particles, my_vec3 extForce) {
    float deltaTime = 0.01;
    Particle part = particles[pInd];
 
-   part.velocity.x = part.velocity.x + exterForce.x*deltaTime;
-   part.velocity.y = part.velocity.y + exterForce.y*deltaTime;
-   part.velocity.z = part.velocity.z + exterForce.z*deltaTime;
+   part.velocity.x = part.velocity.x + exterForce.x * deltaTime;
+   part.velocity.y = part.velocity.y + exterForce.y * deltaTime;
+   part.velocity.z = part.velocity.z + exterForce.z * deltaTime;
 
    part.position.x = part.position.x + part.velocity.x * deltaTime;
    part.position.y = part.position.y + part.velocity.y * deltaTime;
