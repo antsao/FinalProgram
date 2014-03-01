@@ -27,21 +27,29 @@
 #include "glm/gtc/type_ptr.hpp"
 #include "GeometryCreator.h"
 #include "MStackHelp.h"
+#include "Fluid.h"
+#include "ParticleUpdate.h"
 
 using namespace std;
 using namespace glm;
 
 #define PI 3.14
+#define NUM_PARTICLES 125000
+#define BOTTOM_BOUND -40
+#define FRONT_BOUND 40
+#define BACK_BOUND -40
+#define LEFT_BOUND -40
+#define RIGHT_BOUND 40
 
 GLuint triBuffObj;
 GLuint colBuffObj;
 GLuint normalBuffObj;
 
-RenderingHelper ModelTrans;
+float particleYPos = 25;
+float particleXPos = -25;
+float particleZPos = 25;
 int particleCount = 1;
-float particleYPos = 50;
-float particleXPos = -50;
-float particleZPos = 50;
+int mode = 2;
 int shade = 1;
 int ShadeProg;
 int mouseStartX;
@@ -52,12 +60,13 @@ float g_width;
 float g_height;
 float alpha = 0;
 float beta = -PI / 2;
-vec3 eyePos = vec3(0, 0, 100);
+vec3 eyePos = vec3(0, 0, 60);
 vec3 lookAtPt = vec3(0, 0, 0);
 vec3 wVector = vec3(0, 0, 0);
 vec3 uVector = vec3(0, 0, 0);
 vec4 directionLight = vec4(0, 0, 0, 0);
 
+Particle allParticles[NUM_PARTICLES];
 Mesh *particle;
 
 GLint h_aPosition;
@@ -91,12 +100,9 @@ void SetView() {
   safe_glUniformMatrix4fv(h_uViewMatrix, value_ptr(LookAtView));
 }
 
-void SetModel() {
-  /*if (directionLight.x == 0 && directionLight.y == 0 && directionLight.z == 0) {
-    directionLight = ModelTrans.modelViewMatrix * vec4(0, 0, -2, 1);
-    directionLight = vec4(10, 10, 4, 1) - directionLight;
-  }*/
-  safe_glUniformMatrix4fv(h_uModelMatrix, glm::value_ptr(ModelTrans.modelViewMatrix));
+void SetModel(float transX, float transY, float transZ) {
+  mat4 trans = translate(mat4(1.0f), vec3(transX, transY, transZ));
+  safe_glUniformMatrix4fv(h_uModelMatrix, glm::value_ptr(trans));
 }
 
 void SetMaterial() {
@@ -167,18 +173,41 @@ int InstallShader(const GLchar *vShaderName, const GLchar *fShaderName) {
   return 1;
 }
 
-void initPart() {
-   particle = GeometryCreator::CreateSphere(glm::vec3(0.2f));
+void calculatePositions() {
+  for (int i = 0; i < NUM_PARTICLES; i++) {
+    if (particleCount % 101 == 0) {
+      particleZPos = 25;
+      if (particleXPos != 25) {
+        particleXPos++;
+      }
+      else {
+        particleXPos = -25;
+        particleYPos--;
+        particleZPos = 25;
+      }
+    }
+    else {
+      particleZPos--;
+    }
+    allParticles[i].position.x = particleXPos;
+    allParticles[i].position.y = particleYPos;
+    allParticles[i].position.z = particleZPos;
+    allParticles[i].velocity.x = 0;
+    allParticles[i].velocity.y = 6;
+    allParticles[i].velocity.z = 0;
+    particleCount++;
+  }
 }
 
 void InitGeom() {
-  initPart();
-  // TODO: Initialize the points, and put them into housekeeping structs to use with CUDA
+  // Make patient ZERO particle
+  particle = GeometryCreator::CreateSphere(glm::vec3(0.2f));
+
+  // Fill HouseKeeping Array of Particle positions
+  calculatePositions();
 }
 
 void Initialize() {
-  ModelTrans.useModelViewMatrix();
-  ModelTrans.loadIdentity();
   glClearColor(1, 1, 1, 1.0f);
   glEnable(GL_DEPTH_TEST);
 }
@@ -188,7 +217,6 @@ void Draw() {
   glUseProgram(ShadeProg);
   SetProjectionMatrix();
   SetView();
-  SetModel();
   glUniform4f(h_lightPos, directionLight.x, directionLight.y, directionLight.z, 1);
   glUniform4f(h_cameraPos, 0, 0, 0, 1);
 
@@ -204,43 +232,23 @@ void Draw() {
   mouseStartX = mouseEndX;
   mouseStartY = mouseEndY;
 
-  ModelTrans.loadIdentity();
-  //SetMaterial();
-  for(int i = 0; i < 125000; i++) {
-    ModelTrans.pushMatrix();
-      if (particleCount % 101 == 0) {
-        particleZPos = 50;
-        if (particleXPos != 50) {
-          particleXPos++;
-        }
-        else {
-          particleXPos = -50;
-          particleYPos--;
-          particleZPos = 50;
-        }
-      }
-      else {
-        particleZPos--;
-      }
-      particleCount++;
-      ModelTrans.translate(vec3(particleXPos, particleYPos, particleZPos));
-      SetModel();
-      safe_glUniform3f(h_uColor, 0, 0, 1);
-      safe_glEnableVertexAttribArray(h_aPosition);
-      glBindBuffer(GL_ARRAY_BUFFER, particle->PositionHandle);
-      safe_glVertexAttribPointer(h_aPosition, 3, GL_FLOAT, GL_FALSE, 0, 0);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, particle->IndexHandle);
-
-      glDrawElements(GL_TRIANGLES, particle->IndexBufferLength, GL_UNSIGNED_SHORT, 0);
-      // Disable the shader and attributes
-      safe_glDisableVertexAttribArray(h_aPosition);
-      //safe_glDisableVertexAttribArray(h_aNormal);
-    ModelTrans.popMatrix();
+  // Draw based on Array of Particle Positions
+  for (int index = 0; index < NUM_PARTICLES; index++) {
+    safe_glUniform3f(h_uColor, 0, 0, 1);
+    safe_glEnableVertexAttribArray(h_aPosition);
+    glBindBuffer(GL_ARRAY_BUFFER, particle->PositionHandle);
+    safe_glVertexAttribPointer(h_aPosition, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, particle->IndexHandle);
+    SetModel(allParticles[index].position.x, 
+             allParticles[index].position.y, 
+             allParticles[index].position.z);
+    glDrawElements(GL_TRIANGLES, particle->IndexBufferLength, GL_UNSIGNED_SHORT, 0);
   }
-  particleZPos = 50;
-  particleXPos = -50;
-  particleYPos = 50;
-  particleCount = 1;
+
+  // Update the particles based on gravity force
+  updateParticles(allParticles, NUM_PARTICLES, GRAVITY, mode);
+
+  safe_glDisableVertexAttribArray(h_aPosition);
   glUseProgram(0);
   glutSwapBuffers();
 }

@@ -2,6 +2,8 @@
 #define FLUID_H
 
 #define MAX_PARTICLES 100
+#define GRAVITY 1
+#define NO_COLLISION 2
 
 typedef struct my_vec3{
    float x, y, z;
