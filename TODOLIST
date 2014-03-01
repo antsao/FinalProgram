@@ -1,0 +1,8 @@
+1. Display particles in a cube
+2. Do housekeeping
+3. Use CUDA to have gravity affect all particles
+4. Use CUDA for collision detection to contain the particles in a box
+5. Use CUDA for collision dampening
+6. Use shader for lighting
+7. Use shader for texturing
+8. Make user inputs
