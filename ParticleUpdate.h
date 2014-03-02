@@ -6,6 +6,6 @@
 #include "Fluid.h"
 
 void updateParticles(Particle *particles, int size, int force, int mode);
-__global__ void updateParticleKernel(Particle *particles, my_vec3 extForce);
+__global__ void updateParticleKernel(Particle *particles, my_vec3 *extForce);
 
 #endif

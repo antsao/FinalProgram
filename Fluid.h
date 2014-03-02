@@ -15,7 +15,7 @@ typedef struct my_vec4{
 
 typedef struct Particle{
    my_vec3 position;       /* x, y, z position of particle */
-   my_vec3 velocity;          /* x, y, z velocity of particle */
+   my_vec3 velocity;       /* x, y, z velocity of particle */
 } Particle;
 
 typedef struct ParticleSystem{

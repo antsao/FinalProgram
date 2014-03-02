@@ -34,7 +34,7 @@ using namespace std;
 using namespace glm;
 
 #define PI 3.14
-#define NUM_PARTICLES 8192
+#define NUM_PARTICLES 16384
 #define BOTTOM_BOUND -40
 #define FRONT_BOUND 40
 #define BACK_BOUND -40
@@ -193,7 +193,7 @@ void calculatePositions() {
     allParticles[i].position.y = particleYPos;
     allParticles[i].position.z = particleZPos;
     allParticles[i].velocity.x = 0;
-    allParticles[i].velocity.y = 6;
+    allParticles[i].velocity.y = -6;
     allParticles[i].velocity.z = 0;
     particleCount++;
   }
