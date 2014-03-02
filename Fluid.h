@@ -15,15 +15,7 @@ typedef struct my_vec4{
 
 typedef struct Particle{
    my_vec3 position;       /* x, y, z position of particle */
-   my_vec3 oldPosition;     /* previous position */
    my_vec3 velocity;          /* x, y, z velocity of particle */
-   my_vec4 color;          /* Color of the particle RGB */
-   my_vec4 oldColor;        /* Previous color */
-   float startTime;     /* Start time of the particle */
-   float lifeTime;      /* How long it has been alive */
-   float size;          /* size of particle */
-   float angle;
-   float weight;        /* weight of particle */
 } Particle;
 
 typedef struct ParticleSystem{

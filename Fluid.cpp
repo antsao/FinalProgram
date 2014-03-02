@@ -34,7 +34,7 @@ using namespace std;
 using namespace glm;
 
 #define PI 3.14
-#define NUM_PARTICLES 125000
+#define NUM_PARTICLES 8192
 #define BOTTOM_BOUND -40
 #define FRONT_BOUND 40
 #define BACK_BOUND -40
