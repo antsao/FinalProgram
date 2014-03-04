@@ -215,7 +215,7 @@ void Draw() {
   }
 
   // Update the particles based on gravity force
-  updateParticles(allParticles, NUM_PARTICLES, GRAVITY, mode);
+  updateParticles(allParticles, NUM_PARTICLES, GRAVITY);
 
   safe_glDisableVertexAttribArray(h_aPosition);
   glUseProgram(0);
