@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <map>
 #include "ParticleUpdate.h"
 #include "Fluid.h"
 
@@ -41,6 +42,17 @@ void updateParticles(Particle *particles, int size, my_vec3 localExtForce) {
   cudaFree(d_particles);
   cudaFree(d_localExtForce);
 }
+
+/*__global__ void updateGrid(Particle *particles, int *gridCounter, std::map<int, thrust_device::vector<int> > gridCells/*to be a pointer or not to be a pointer? F U C++ :) ) {
+   int idx = blockIdx.x*blockDim.x + threadIdx.x;
+   Particle curPart = particles[idx];
+   
+   //assumes that particle position is within bounding box
+   int gridIdx = curPart.position.z*60*60 + curPart.position.y*60 + curPart.position.x;
+
+   atomicAdd(gridCounter + gridIdx, 1);
+   gridCells.at(gridIdx).push_back(idx); //not sure if works ...
+}*/
 
 __global__ void updateParticleKernel(Particle *particles, my_vec3 *extForce) {
   float deltaTime = 0.01;
