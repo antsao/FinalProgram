@@ -35,11 +35,6 @@ using namespace glm;
 
 #define PI 3.14
 #define NUM_PARTICLES 16384
-#define BOTTOM_BOUND -40
-#define FRONT_BOUND 40
-#define BACK_BOUND -40
-#define LEFT_BOUND -40
-#define RIGHT_BOUND 40
 
 GLuint triBuffObj;
 GLuint colBuffObj;
@@ -58,12 +53,6 @@ int mouseEndX;
 int mouseEndY;
 float g_width;
 float g_height;
-float alpha = 0;
-float beta = -PI / 2;
-vec3 eyePos = vec3(0, 0, 60);
-vec3 lookAtPt = vec3(0, 0, 0);
-vec3 wVector = vec3(0, 0, 0);
-vec3 uVector = vec3(0, 0, 0);
 vec4 directionLight = vec4(0, 0, 0, 0);
 
 Particle allParticles[NUM_PARTICLES];
@@ -88,21 +77,14 @@ void SetProjectionMatrix() {
 }
 
 void SetView() {
-  lookAtPt.x = cos(alpha) * cos(beta);
-  lookAtPt.y = sin(alpha);
-  lookAtPt.z = cos(alpha) * cos(PI / 2 - beta);
-  lookAtPt *= 400;
-  wVector = -normalize(lookAtPt - eyePos);
-  uVector = cross(vec3(0, 1, 0), wVector);
-  uVector = normalize(uVector);
-  eyePos.y = 0;
-  mat4 LookAtView = lookAt(eyePos, lookAtPt, vec3(0, 1, 0));
-  safe_glUniformMatrix4fv(h_uViewMatrix, value_ptr(LookAtView));
+  mat4 Trans = translate(mat4(1.0f), vec3(0.0f, 0, -60));
+  mat4 RotateX = rotate(Trans, 0.0f, vec3(0.0f, 1, 0));
+  safe_glUniformMatrix4fv(h_uViewMatrix, value_ptr(RotateX));
 }
 
 void SetModel(float transX, float transY, float transZ) {
   mat4 trans = translate(mat4(1.0f), vec3(transX, transY, transZ));
-  safe_glUniformMatrix4fv(h_uModelMatrix, glm::value_ptr(trans));
+  safe_glUniformMatrix4fv(h_uModelMatrix, value_ptr(trans));
 }
 
 void SetMaterial() {
@@ -220,18 +202,6 @@ void Draw() {
   glUniform4f(h_lightPos, directionLight.x, directionLight.y, directionLight.z, 1);
   glUniform4f(h_cameraPos, 0, 0, 0, 1);
 
-  // Camera Controls
-  alpha += (mouseEndY - mouseStartY) * PI / g_height;
-  if (alpha > 1.3) {
-    alpha = 1.3;
-  }
-  else if (alpha < -1.3) {
-    alpha = -1.3;
-  }
-  beta += (mouseEndX - mouseStartX) * PI / g_width;
-  mouseStartX = mouseEndX;
-  mouseStartY = mouseEndY;
-
   // Draw based on Array of Particle Positions
   for (int index = 0; index < NUM_PARTICLES; index++) {
     safe_glUniform3f(h_uColor, 0, 0, 1);
@@ -259,43 +229,8 @@ void ReshapeGL(int width, int height) {
   glViewport(0, 0, (GLsizei)(width), (GLsizei)(height));
 }
 
-void Mouse(int button, int state, int x, int y) {
-  switch (state) {
-    case GLUT_DOWN:
-      mouseStartX = x;
-      mouseStartY = y;
-      break;
-    case GLUT_UP:
-      mouseEndX = x;
-      mouseEndY = y;
-      break;
-  }
-}
-
-void MouseDrag(int x, int y) {
-  mouseEndX = x;
-  mouseEndY = y;
-  glutPostRedisplay();
-}
-
 void keyboard(unsigned char key, int x, int y ) {
   switch (key) {
-    case 'w':
-      wVector *= 0.1;
-      eyePos -= wVector;
-      break;
-    case 's':
-      wVector *= 0.1;
-      eyePos += wVector;
-      break;
-    case 'a':
-      uVector *= 0.1;
-      eyePos -= uVector;
-      break;
-    case 'd':
-      uVector *= 0.1;
-      eyePos += uVector;
-      break;
     case 'q': case 'Q' :
       exit( EXIT_SUCCESS );
       break;
@@ -317,8 +252,6 @@ int main(int argc, char *argv[]) {
   glutReshapeFunc(ReshapeGL);
   glutDisplayFunc(Draw);
   glutKeyboardFunc(keyboard);
-  glutMouseFunc(Mouse);
-  glutMotionFunc(MouseDrag);
   glutTimerFunc(100, update, 0);
   g_width = g_height = 200;
   #ifdef _WIN32
