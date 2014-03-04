@@ -17,6 +17,8 @@ ParticleSystem::ParticleSystem(my_vec3 gravity, my_vec3 wind, float milestone, c
 
 void ParticleSystem::initalize()
 {
+  srand(time(NULL));
+  
   float particleYPos = 25;
   float particleXPos = -25;
   float particleZPos = 25;
@@ -41,7 +43,7 @@ void ParticleSystem::initalize()
     particles[i].position.y = particleYPos;
     particles[i].position.z = particleZPos;
     particles[i].velocity.x = 0;
-    particles[i].velocity.y = -6;
+    particles[i].velocity.y = -(rand()/(float)RAND_MAX) + rand()%20 + 3;
     particles[i].velocity.z = 0;
     particleCount++;
   }

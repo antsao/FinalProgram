@@ -1,6 +1,11 @@
 #ifndef FLUID_H
 #define FLUID_H
 
+#include <ctime>
+#include <cmath>
+#include <math.h>
+#include <algorithm>
+
 #define MAX_PARTICLES 100
 #define GRAVITY 1
 #define NO_COLLISION 2
