@@ -11,7 +11,7 @@
 #define LEFT_BOUND -30
 #define RIGHT_BOUND 30
 
-void updateParticles(Particle *particles, int size, int force, int mode) {
+void updateParticles(Particle *particles, int size, int force) {
   dim3 dimBlock(256);
   dim3 dimGrid(64);
 
@@ -42,9 +42,7 @@ void updateParticles(Particle *particles, int size, int force, int mode) {
     printf("didn't copy force\n");
   }
 
-  if (mode == NO_COLLISION) {
-    updateParticleKernel<<<dimGrid, dimBlock>>>(d_particles, d_localExtForce);
-  }
+  updateParticleKernel<<<dimGrid, dimBlock>>>(d_particles, d_localExtForce);
   cudaMemcpy(particles, d_particles, sizeof(Particle) * size, cudaMemcpyDeviceToHost);
 
   cudaFree(d_particles);

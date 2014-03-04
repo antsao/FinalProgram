@@ -1,5 +1,5 @@
 CC=g++
-CPPSOURCES=Fluid.cpp GLSL_helper.cpp GeometryCreator.cpp MStackHelp.cpp
+CPPSOURCES=ParticleSystem.cpp Fluid.cpp GLSL_helper.cpp GeometryCreator.cpp MStackHelp.cpp
 CPPFLAGS= -DGL_GLEXT_PROTOTYPES 
 APPLE_CPPFLAGS= -framework OpenGL -framework GLUT -Wno-deprecated -Wno-parentheses
 LINUX_CPPFLAGS= -lGL -lGLU -lglut

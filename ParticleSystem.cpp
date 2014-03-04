@@ -49,5 +49,9 @@ void ParticleSystem::initalize()
 }
 
 void ParticleSystem::update(float deltaTime) {
-
+   #ifdef ENABLE_CUDA
+     updateParticles(particles, NUM_PARTICLES, GRAVITY);    
+   #else
+      //Implement CPU Version
+   #endif
 }
