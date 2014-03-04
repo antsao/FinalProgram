@@ -18,7 +18,7 @@ void updateParticles(Particle *particles, int size, int force, int mode) {
   my_vec3 localExtForce;
   if (force == GRAVITY) {
     localExtForce.x = 0;
-    localExtForce.y = -3;
+    localExtForce.y = -10;
     localExtForce.z = 0;
   }
 
