@@ -6,3 +6,8 @@
 6. Use shader for lighting
 7. Use shader for texturing
 8. Make user inputs
+
+From particleSystem.cpp take these methods
+_initialize
+update
+constructor
