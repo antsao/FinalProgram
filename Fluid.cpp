@@ -54,7 +54,7 @@ float g_width;
 float g_height;
 vec4 directionLight = vec4(0, 0, 0, 0);
 
-Particle allParticles[NUM_PARTICLES];
+ParticleSystem allParticles(-1, NULL);
 Mesh *particle;
 
 GLint h_aPosition;
@@ -154,38 +154,12 @@ int InstallShader(const GLchar *vShaderName, const GLchar *fShaderName) {
   return 1;
 }
 
-void calculatePositions() {
-  for (int i = 0; i < NUM_PARTICLES; i++) {
-    if (particleCount % 101 == 0) {
-      particleZPos = 25;
-      if (particleXPos != 25) {
-        particleXPos++;
-      }
-      else {
-        particleXPos = -25;
-        particleYPos--;
-        particleZPos = 25;
-      }
-    }
-    else {
-      particleZPos--;
-    }
-    allParticles[i].position.x = particleXPos;
-    allParticles[i].position.y = particleYPos;
-    allParticles[i].position.z = particleZPos;
-    allParticles[i].velocity.x = 0;
-    allParticles[i].velocity.y = -6;
-    allParticles[i].velocity.z = 0;
-    particleCount++;
-  }
-}
-
 void InitGeom() {
   // Make patient ZERO particle
   particle = GeometryCreator::CreateSphere(glm::vec3(0.2f));
 
   // Fill HouseKeeping Array of Particle positions
-  calculatePositions();
+  allParticles.initalize();
 }
 
 void Initialize() {
@@ -208,14 +182,13 @@ void Draw() {
     glBindBuffer(GL_ARRAY_BUFFER, particle->PositionHandle);
     safe_glVertexAttribPointer(h_aPosition, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, particle->IndexHandle);
-    SetModel(allParticles[index].position.x, 
-             allParticles[index].position.y, 
-             allParticles[index].position.z);
+    SetModel(allParticles.particles[index].position.x, 
+             allParticles.particles[index].position.y, 
+             allParticles.particles[index].position.z);
     glDrawElements(GL_TRIANGLES, particle->IndexBufferLength, GL_UNSIGNED_SHORT, 0);
   }
 
-  // Update the particles based on gravity force
-  updateParticles(allParticles, NUM_PARTICLES, GRAVITY);
+  allParticles.update(0.01);
 
   safe_glDisableVertexAttribArray(h_aPosition);
   glUseProgram(0);

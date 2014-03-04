@@ -26,15 +26,15 @@ typedef struct Particle{
 } Particle;
 
 class ParticleSystem{
-   protected:
-      Particle particles[MAX_PARTICLES]; /* Keeps track of all the particles */
+   public:
+      Particle particles[NUM_PARTICLES]; /* Keeps track of all the particles */
       unsigned int numParticles;         /* Current number of particles alive */
       my_vec3 gravity;                      /* Particle System affects particles */
       my_vec3 wind;                         
       float milestone;                    /* How long a particle can live */
       char* TextureFile;                 /* Name of the texture file */
    public:
-      ParticleSystem(my_vec3 gravity, my_vec3 wind, float milestone, char* Texture);
+      ParticleSystem(float milestone, char* Texture);
       void initalize();
       void update(float deltaTime);
 };

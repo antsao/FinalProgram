@@ -12,8 +12,8 @@ CUSOURCES=ParticleUpdate.cu
 all: mac
 
 mac:
-	$(NCC) $(CUSOURCES) $(CU_FLAGS) $(CPPSOURCES) $(CPPFLAGS) $(APPLE_CPPFLAGS) 
+	$(NCC) $(CUSOURCES) $(CU_FLAGS) $(CPPSOURCES) $(CPPFLAGS) $(APPLE_CPPFLAGS) -DENABLE_CUDA
 	#g++ Fluid.cpp GLSL_helper.cpp GeometryCreator.cpp MStackHelp.cpp -DGL_GLEXT_PROTOTYPES -framework OpenGL -framework GLUT -Wno-deprecated -Wno-parentheses
 
 linux:
-	$(NCC) $(CUSOURCES) $(CU_FLAGS) $(CPPSOURCES) $(CPPFLAGS) $(LINUX_CPPFLAGS)
+	$(NCC) $(CUSOURCES) $(CU_FLAGS) $(CPPSOURCES) $(CPPFLAGS) $(LINUX_CPPFLAGS) -DENABLE_CUDA

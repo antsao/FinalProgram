@@ -11,16 +11,9 @@
 #define LEFT_BOUND -30
 #define RIGHT_BOUND 30
 
-void updateParticles(Particle *particles, int size, int force) {
+void updateParticles(Particle *particles, int size, my_vec3 localExtForce) {
   dim3 dimBlock(256);
   dim3 dimGrid(64);
-
-  my_vec3 localExtForce;
-  if (force == GRAVITY) {
-    localExtForce.x = 0;
-    localExtForce.y = -10;
-    localExtForce.z = 0;
-  }
 
   Particle *d_particles;
   if (cudaMalloc(&d_particles, sizeof(Particle) * size) != cudaSuccess) {
