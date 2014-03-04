@@ -34,7 +34,6 @@ using namespace std;
 using namespace glm;
 
 #define PI 3.14
-#define NUM_PARTICLES 16384
 
 GLuint triBuffObj;
 GLuint colBuffObj;
