@@ -6,6 +6,8 @@
 #include "Fluid.h"
 
 void updateParticles(Particle *particles, int size, my_vec3 localExtForce);
+void updateGrid(Particle *particles, int *gridCounter, int *gridCells);
 __global__ void updateParticleKernel(Particle *particles, my_vec3 *extForce);
+__global__ void updateParticleInCells(Particle *particles, int *gridCounter, int *gridCells);
 
 #endif

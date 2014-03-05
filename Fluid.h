@@ -10,7 +10,7 @@
 #define GRAVITY 1
 #define NO_COLLISION 2
 
-#define NUM_PARTICLES 16384
+#define NUM_PARTICLES 65536
 
 typedef struct my_vec3{
    float x, y, z;
@@ -22,7 +22,8 @@ typedef struct my_vec4{
 
 typedef struct Particle{
    my_vec3 position;       /* x, y, z position of particle */
-   my_vec3 velocity;       /* x, y, z velocity of particle */
+   my_vec3 velocity;   /* x, y, z velocity of particle */
+   my_vec3 color;       
 } Particle;
 
 class ParticleSystem{

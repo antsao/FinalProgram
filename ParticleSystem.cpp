@@ -1,5 +1,7 @@
+#include <stdio.h>
 #include "Fluid.h"
 #include "ParticleUpdate.h"
+
 // MEMBERS
 //      Particle particles[MAX_PARTICLES]; /* Keeps track of all the particles */
 //      unsigned int numParticles;         /* Current number of particles alive */
@@ -24,7 +26,7 @@ void ParticleSystem::initalize()
   int particleCount = 1;
 
   for (int i = 0; i < NUM_PARTICLES; i++) {
-    if (particleCount % 101 == 0) {
+    if (particleCount % 51 == 0) {
       particleZPos = 25;
       if (particleXPos != 25) {
         particleXPos++;
@@ -41,9 +43,12 @@ void ParticleSystem::initalize()
     particles[i].position.x = particleXPos;
     particles[i].position.y = particleYPos;
     particles[i].position.z = particleZPos;
-    particles[i].velocity.x = 0;
-    particles[i].velocity.y = -((rand()/(float)RAND_MAX) + rand()%20 + 3);
-    particles[i].velocity.z = 0;
+    particles[i].velocity.x = 3 - rand() % 5;//(((rand()%2)?1:-1))*(rand()/(float)RAND_MAX) + rand() % 20 + 5;
+    particles[i].velocity.y = 2 - rand() % 5;//(((rand()%2)?1:-1))*(rand()/(float)RAND_MAX) + rand() % 20 + 5;
+    particles[i].velocity.z = 1 - rand() % 5;//(((rand()%2)?1:-1))*(rand()/(float)RAND_MAX) + rand() % 20 + 5;
+    particles[i].color.x = (float)((rand()/(float)RAND_MAX) + rand()%3)/10;
+    particles[i].color.y = (float)((rand()/(float)RAND_MAX) + rand()%3)/10;
+    particles[i].color.z = 1;//(float)(rand()/(float)RAND_MAX);
     particleCount++;
   }
    
@@ -53,7 +58,7 @@ void ParticleSystem::update(float deltaTime) {
   #ifdef ENABLE_CUDA
     my_vec3 gravity;
     gravity.x = 0.0f;
-    gravity.y = -5.0f;
+    gravity.y = -3.0f;
     gravity.z = 0.0f;
 
     my_vec3 wind;

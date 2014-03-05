@@ -7,14 +7,42 @@
 #include "Fluid.h"
 
 #define BOTTOM_BOUND -30
+#define TOP_BOUND 30
 #define FRONT_BOUND 30
 #define BACK_BOUND -30
 #define LEFT_BOUND -30
 #define RIGHT_BOUND 30
 
+#define NUM_CELLS 226981
+#define NUM_CELLS_X4 907924
+
+using namespace std;
+
 void updateParticles(Particle *particles, int size, my_vec3 localExtForce) {
-  dim3 dimBlock(256);
-  dim3 dimGrid(64);
+  int *gridCounter = (int *)calloc(sizeof(int), NUM_CELLS);
+  int *gridCells = (int *)calloc(sizeof(int), NUM_CELLS_X4);
+
+  updateGrid(particles, gridCounter, gridCells);
+
+  int *d_gridCounter;
+  if (cudaMalloc(&d_gridCounter, sizeof(int) * NUM_CELLS) != cudaSuccess) {
+    printf("didn't malloc space for grid counters\n");
+  }
+  if (cudaMemcpy(d_gridCounter, gridCounter, 
+                 sizeof(int) * NUM_CELLS,
+                 cudaMemcpyHostToDevice) != cudaSuccess) {
+    printf("didn't copy gridCounter\n");
+  }
+
+  int *d_gridCells;
+  if (cudaMalloc(&d_gridCells, sizeof(int) * NUM_CELLS_X4) != cudaSuccess) {
+    printf("didn't malloc space for grid cells\n");
+  }
+  if (cudaMemcpy(d_gridCells, gridCells, 
+                 sizeof(int) * NUM_CELLS_X4,
+                 cudaMemcpyHostToDevice) != cudaSuccess) {
+    printf("didn't copy grid cells");
+  }
 
   Particle *d_particles;
   if (cudaMalloc(&d_particles, sizeof(Particle) * size) != cudaSuccess) {
@@ -35,27 +63,81 @@ void updateParticles(Particle *particles, int size, my_vec3 localExtForce) {
                  cudaMemcpyHostToDevice) != cudaSuccess) {
     printf("didn't copy force\n");
   }
+  dim3 dimBlockCells(61);
+  dim3 dimGridCells(3721);
 
+  updateParticleInCells<<<dimGridCells, dimBlockCells>>>(d_particles, d_gridCounter, d_gridCells);
+
+  dim3 dimBlock(1024);
+  dim3 dimGrid(64);
+
+  // Updating the particles with gravity
   updateParticleKernel<<<dimGrid, dimBlock>>>(d_particles, d_localExtForce);
   cudaMemcpy(particles, d_particles, sizeof(Particle) * size, cudaMemcpyDeviceToHost);
 
+  free(gridCounter);
+  free(gridCells);
+  cudaFree(d_gridCounter);
+  cudaFree(d_gridCells);
   cudaFree(d_particles);
   cudaFree(d_localExtForce);
 }
 
-/*__global__ void updateGrid(Particle *particles, int *gridCounter, std::map<int, thrust_device::vector<int> > gridCells/*to be a pointer or not to be a pointer? F U C++ :) ) {
-   int idx = blockIdx.x*blockDim.x + threadIdx.x;
-   Particle curPart = particles[idx];
-   
-   //assumes that particle position is within bounding box
-   int gridIdx = curPart.position.z*60*60 + curPart.position.y*60 + curPart.position.x;
+void updateGrid(Particle *particles, int *gridCounter, int *gridCells) {
+  unsigned int idx;
+  for (int x = 0; x < NUM_PARTICLES; x++) {
+    idx = (particles[x].position.z + 30) * 61 * 61 + 
+          (particles[x].position.y + 30) * 61 + 
+          (particles[x].position.x + 30);
+    if (gridCounter[idx] < 4) {
+      gridCells[idx * 4 + gridCounter[idx]] = x;
+      gridCounter[idx]++;
+    }
+  }
+}
 
-   atomicAdd(gridCounter + gridIdx, 1);
-   gridCells.at(gridIdx).push_back(idx); //not sure if works ...
-}*/
+__global__ void updateParticleInCells(Particle *particles, int *gridCounter, int *gridCells) {
+  int partArr[4];
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int max = gridCounter[idx];
+  float velocityArr[12];
+  float velocityX = 0;
+  float velocityY = 0;
+  float velocityZ = 0;
+
+  for (int x = 0; x < max; x++) {
+    partArr[x] = gridCells[idx * 4 + x];
+  }
+
+  for (int x = 0; x < max; x++) {
+    for (int z = 0; z < max; z++) {
+      if (x != z) {
+        velocityX += particles[partArr[z]].velocity.x;
+        velocityY += particles[partArr[z]].velocity.y;
+        velocityZ += particles[partArr[z]].velocity.z;
+      }
+    }
+    if (max > 1) {
+      velocityArr[x * 3] = velocityX;
+      velocityArr[x * 3 + 1] = velocityY;
+      velocityArr[x * 3 + 2] = velocityZ;
+      velocityX = 0;
+      velocityY = 0;
+      velocityZ = 0;
+    }
+  }
+
+  for (int x = 0; x < max; x++) {
+    if(max > 1) {
+      particles[partArr[x]].velocity.x = velocityArr[x * 3];
+      particles[partArr[x]].velocity.y = velocityArr[x * 3 + 1];
+      particles[partArr[x]].velocity.z = velocityArr[x * 3 + 2];
+    }
+  }
+}
 
 __global__ void updateParticleKernel(Particle *particles, my_vec3 *extForce) {
-  float deltaTime = 0.01;
+  float deltaTime = 0.1;
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   Particle part = particles[idx];
 
@@ -69,19 +151,27 @@ __global__ void updateParticleKernel(Particle *particles, my_vec3 *extForce) {
 
   if (part.position.y <= BOTTOM_BOUND) {
     part.position.y = BOTTOM_BOUND;
+    part.velocity.y = -part.velocity.y/10000.0;
+  }
+  if (part.position.y >= TOP_BOUND) {
+    part.position.y = TOP_BOUND;
+    part.velocity.y = -part.velocity.y/10000.0;
   }
   if (part.position.x <= LEFT_BOUND) {
-    part.position.y = LEFT_BOUND;
+    part.position.x = LEFT_BOUND;
+    part.velocity.x = -part.velocity.x/10000.0;
   }
   if (part.position.x >= RIGHT_BOUND) {
     part.position.x = RIGHT_BOUND;
+    part.velocity.x = -part.velocity.x/10000.0;
   }
   if (part.position.z <= BACK_BOUND) {
     part.position.z = BACK_BOUND;
+    part.velocity.z = -part.velocity.z/10000.0;
   }
   if (part.position.z >= FRONT_BOUND) {
     part.position.z = FRONT_BOUND;
+    part.velocity.z = -part.velocity.z/10000.0;
   }
-
   particles[idx] = part;
 }

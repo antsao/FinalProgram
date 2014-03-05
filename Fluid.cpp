@@ -156,7 +156,7 @@ int InstallShader(const GLchar *vShaderName, const GLchar *fShaderName) {
 
 void InitGeom() {
   // Make patient ZERO particle
-  particle = GeometryCreator::CreateSphere(glm::vec3(0.2f));
+  particle = GeometryCreator::CreateSphere(glm::vec3(0.1f));
 
   // Fill HouseKeeping Array of Particle positions
   allParticles.initalize();
@@ -177,7 +177,9 @@ void Draw() {
 
   // Draw based on Array of Particle Positions
   for (int index = 0; index < NUM_PARTICLES; index++) {
-    safe_glUniform3f(h_uColor, 0, 0, 1);
+    safe_glUniform3f(h_uColor, allParticles.particles[index].color.x, 
+                               allParticles.particles[index].color.y,
+                               allParticles.particles[index].color.z);
     safe_glEnableVertexAttribArray(h_aPosition);
     glBindBuffer(GL_ARRAY_BUFFER, particle->PositionHandle);
     safe_glVertexAttribPointer(h_aPosition, 3, GL_FLOAT, GL_FALSE, 0, 0);
@@ -212,7 +214,7 @@ void keyboard(unsigned char key, int x, int y ) {
 
 void update(int val) {
    glutPostRedisplay();
-   glutTimerFunc(100, update, 0);
+   glutTimerFunc(10, update, 0);
 }
 
 int main(int argc, char *argv[]) {
@@ -224,7 +226,7 @@ int main(int argc, char *argv[]) {
   glutReshapeFunc(ReshapeGL);
   glutDisplayFunc(Draw);
   glutKeyboardFunc(keyboard);
-  glutTimerFunc(100, update, 0);
+  glutTimerFunc(10, update, 0);
   g_width = g_height = 200;
   #ifdef _WIN32
     GLenum err = glewInit();
