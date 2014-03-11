@@ -20,6 +20,7 @@
 #include <cmath>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string>
 #include <cmath>
 #include "GLSL_helper.h"
 #include "glm/glm.hpp"
@@ -42,7 +43,12 @@ GLuint normalBuffObj;
 float particleYPos = 25;
 float particleXPos = -25;
 float particleZPos = 25;
+float currentTime;
+float previousTime;
+float fps;
+int frameCount = 0;
 int particleCount = 1;
+int pauseMode = 0;
 int mode = 2;
 int shade = 1;
 int ShadeProg;
@@ -163,38 +169,45 @@ void InitGeom() {
 }
 
 void Initialize() {
-  glClearColor(1, 1, 1, 1.0f);
+  glClearColor(0, 0, 0, 1.0f);
   glEnable(GL_DEPTH_TEST);
 }
 
 void Draw() {
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glUseProgram(ShadeProg);
-  SetProjectionMatrix();
-  SetView();
-  glUniform4f(h_lightPos, directionLight.x, directionLight.y, directionLight.z, 1);
-  glUniform4f(h_cameraPos, 0, 0, 0, 1);
+  if (!pauseMode) {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glUseProgram(ShadeProg);
+    SetProjectionMatrix();
+    SetView();
+    glUniform4f(h_lightPos, directionLight.x, directionLight.y, directionLight.z, 1);
+    glUniform4f(h_cameraPos, 0, 0, 0, 1);
 
-  // Draw based on Array of Particle Positions
-  for (int index = 0; index < NUM_PARTICLES; index++) {
-    safe_glUniform3f(h_uColor, allParticles.particles[index].color.x, 
-                               allParticles.particles[index].color.y,
-                               allParticles.particles[index].color.z);
-    safe_glEnableVertexAttribArray(h_aPosition);
-    glBindBuffer(GL_ARRAY_BUFFER, particle->PositionHandle);
-    safe_glVertexAttribPointer(h_aPosition, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, particle->IndexHandle);
-    SetModel(allParticles.particles[index].position.x, 
-             allParticles.particles[index].position.y, 
-             allParticles.particles[index].position.z);
-    glDrawElements(GL_TRIANGLES, particle->IndexBufferLength, GL_UNSIGNED_SHORT, 0);
+    // Draw based on Array of Particle Positions
+    for (int index = 0; index < NUM_PARTICLES; index++) {
+      safe_glUniform3f(h_uColor, allParticles.particles[index].color.x, 
+                                 allParticles.particles[index].color.y,
+                                 allParticles.particles[index].color.z);
+      safe_glEnableVertexAttribArray(h_aPosition);
+      glBindBuffer(GL_ARRAY_BUFFER, particle->PositionHandle);
+      safe_glVertexAttribPointer(h_aPosition, 3, GL_FLOAT, GL_FALSE, 0, 0);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, particle->IndexHandle);
+      SetModel(allParticles.particles[index].position.x, 
+               allParticles.particles[index].position.y, 
+               allParticles.particles[index].position.z);
+      glDrawElements(GL_TRIANGLES, particle->IndexBufferLength, GL_UNSIGNED_SHORT, 0);
+    }
+
+    // Draw the wireframe cube
+    safe_glUniform3f(h_uColor, 1, 1, 1);
+    SetModel(0, 0, 0);
+    glutWireCube(50.2);
+
+    allParticles.update(0.01);
+
+    safe_glDisableVertexAttribArray(h_aPosition);
+    glUseProgram(0);
+    glutSwapBuffers();
   }
-
-  allParticles.update(0.01);
-
-  safe_glDisableVertexAttribArray(h_aPosition);
-  glUseProgram(0);
-  glutSwapBuffers();
 }
 
 void ReshapeGL(int width, int height) {
@@ -205,6 +218,9 @@ void ReshapeGL(int width, int height) {
 
 void keyboard(unsigned char key, int x, int y ) {
   switch (key) {
+    case ' ':
+      pauseMode = !pauseMode;
+      break;
     case 'q': case 'Q' :
       exit( EXIT_SUCCESS );
       break;
@@ -213,8 +229,28 @@ void keyboard(unsigned char key, int x, int y ) {
 }
 
 void update(int val) {
-   glutPostRedisplay();
-   glutTimerFunc(10, update, 0);
+  glutPostRedisplay();
+
+  // http://mycodelog.com/2010/04/16/fps/
+  frameCount++;
+  currentTime = glutGet(GLUT_ELAPSED_TIME);
+
+  float timeInterval = currentTime - previousTime;
+  if(timeInterval > 1000) {
+    float fps = frameCount / (timeInterval / 1000.0f);
+    previousTime = currentTime;
+    frameCount = 0;
+
+    printf("%f\n", fps);
+  }
+
+  /*string fpsString = "FPS " + frame
+  glRasterPos3f(0, 25, 0);
+  for (char *c = (char *)fpsString.c_str(); *c != '\0'; c++) {
+    glutBitmapCharacter(GLUT_BITMAP_9_BY_15, *c);
+  }*/
+
+  glutTimerFunc(10, update, 0);
 }
 
 int main(int argc, char *argv[]) {
@@ -237,7 +273,8 @@ int main(int argc, char *argv[]) {
   #endif
   Initialize();
   getGLversion();
-  if (!InstallShader(textFileRead((char *)"Fluid_Vert.glsl"), textFileRead((char *)"Fluid_Frag.glsl"))) {
+  if (!InstallShader(textFileRead((char *)"Fluid_Vert.glsl"), 
+                     textFileRead((char *)"Fluid_Frag.glsl"))) {
     printf("Error installing shader!\n");
     return 0;
   }

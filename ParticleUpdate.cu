@@ -6,12 +6,12 @@
 #include "ParticleUpdate.h"
 #include "Fluid.h"
 
-#define BOTTOM_BOUND -30
-#define TOP_BOUND 30
-#define FRONT_BOUND 30
-#define BACK_BOUND -30
-#define LEFT_BOUND -30
-#define RIGHT_BOUND 30
+#define BOTTOM_BOUND -25
+#define TOP_BOUND 25
+#define FRONT_BOUND 25
+#define BACK_BOUND -25
+#define LEFT_BOUND -25
+#define RIGHT_BOUND 25
 
 #define NUM_CELLS 226981
 #define NUM_CELLS_X4 907924
@@ -86,9 +86,9 @@ void updateParticles(Particle *particles, int size, my_vec3 localExtForce) {
 void updateGrid(Particle *particles, int *gridCounter, int *gridCells) {
   unsigned int idx;
   for (int x = 0; x < NUM_PARTICLES; x++) {
-    idx = (particles[x].position.z + 30) * 61 * 61 + 
-          (particles[x].position.y + 30) * 61 + 
-          (particles[x].position.x + 30);
+    idx = (particles[x].position.z + 25) * 51 * 51 + 
+          (particles[x].position.y + 25) * 51 + 
+          (particles[x].position.x + 25);
     if (gridCounter[idx] < 4) {
       gridCells[idx * 4 + gridCounter[idx]] = x;
       gridCounter[idx]++;
