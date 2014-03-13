@@ -20,7 +20,6 @@
 #include <cmath>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string>
 #include <cmath>
 #include "GLSL_helper.h"
 #include "glm/glm.hpp"
@@ -40,12 +39,8 @@ GLuint triBuffObj;
 GLuint colBuffObj;
 GLuint normalBuffObj;
 
-float particleYPos = 25;
-float particleXPos = -25;
-float particleZPos = 25;
 float currentTime;
 float previousTime;
-float fps;
 int frameCount = 0;
 int particleCount = 1;
 int pauseMode = 0;
@@ -58,6 +53,8 @@ int mouseEndX;
 int mouseEndY;
 float g_width;
 float g_height;
+float fps = -1;
+char fpsString[9];
 vec4 directionLight = vec4(0, 0, 0, 0);
 
 ParticleSystem allParticles(-1, NULL);
@@ -162,10 +159,16 @@ int InstallShader(const GLchar *vShaderName, const GLchar *fShaderName) {
 
 void InitGeom() {
   // Make patient ZERO particle
-  particle = GeometryCreator::CreateSphere(glm::vec3(0.1f));
+  particle = GeometryCreator::CreateSphere(glm::vec3(RADIUS));
 
   // Fill HouseKeeping Array of Particle positions
   allParticles.initalize();
+
+  fpsString[0] = 'F';
+  fpsString[1] = 'P';
+  fpsString[2] = 'S';
+  fpsString[3] = ':';
+  fpsString[4] = ' ';
 }
 
 void Initialize() {
@@ -200,11 +203,12 @@ void Draw() {
     // Draw the wireframe cube
     safe_glUniform3f(h_uColor, 1, 1, 1);
     SetModel(0, 0, 0);
-    glutWireCube(50.2);
-
+    glutWireCube(50);  
     allParticles.update(0.01);
 
+
     safe_glDisableVertexAttribArray(h_aPosition);
+
     glUseProgram(0);
     glutSwapBuffers();
   }
@@ -237,19 +241,34 @@ void update(int val) {
 
   float timeInterval = currentTime - previousTime;
   if(timeInterval > 1000) {
-    float fps = frameCount / (timeInterval / 1000.0f);
+    fps = frameCount / (timeInterval / 1000);
     previousTime = currentTime;
     frameCount = 0;
-
-    printf("%f\n", fps);
   }
 
-  /*string fpsString = "FPS " + frame
-  glRasterPos3f(0, 25, 0);
-  for (char *c = (char *)fpsString.c_str(); *c != '\0'; c++) {
-    glutBitmapCharacter(GLUT_BITMAP_9_BY_15, *c);
-  }*/
+  if (fps != -1) {
+    fpsString[5] = (int)fps / 100 % 10 + 48;
+    fpsString[6] = (int)fps / 10 % 10 + 48;
+    fpsString[7] = (int)fps / 1 % 10 + 48;
+    glColor3f(1, 1, 1);
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, 1280, 0, 1024);
 
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    glRasterPos2i(600, 900);
+    for (char *c = fpsString; *c != '\0'; c++) {
+       glutBitmapCharacter(GLUT_BITMAP_9_BY_15, *c);
+    }
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glFlush();
+    glutSwapBuffers();
+  }
   glutTimerFunc(10, update, 0);
 }
 

@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <map>
+#include <cmath>
 #include "ParticleUpdate.h"
 #include "Fluid.h"
 
@@ -13,8 +14,10 @@
 #define LEFT_BOUND -25
 #define RIGHT_BOUND 25
 
-#define NUM_CELLS 226981
-#define NUM_CELLS_X4 907924
+#define NUM_CELLS 148877
+#define NUM_CELLS_X4 595508
+
+#define DELTA_TIME 0.1
 
 using namespace std;
 
@@ -41,7 +44,7 @@ void updateParticles(Particle *particles, int size, my_vec3 localExtForce) {
   if (cudaMemcpy(d_gridCells, gridCells, 
                  sizeof(int) * NUM_CELLS_X4,
                  cudaMemcpyHostToDevice) != cudaSuccess) {
-    printf("didn't copy grid cells");
+    printf("didn't copy grid cells\n");
   }
 
   Particle *d_particles;
@@ -63,17 +66,19 @@ void updateParticles(Particle *particles, int size, my_vec3 localExtForce) {
                  cudaMemcpyHostToDevice) != cudaSuccess) {
     printf("didn't copy force\n");
   }
-  dim3 dimBlockCells(61);
-  dim3 dimGridCells(3721);
 
-  updateParticleInCells<<<dimGridCells, dimBlockCells>>>(d_particles, d_gridCounter, d_gridCells);
-
-  dim3 dimBlock(1024);
-  dim3 dimGrid(64);
+  dim3 dimBlock(32);
+  dim3 dimGrid(1024);
 
   // Updating the particles with gravity
-  updateParticleKernel<<<dimGrid, dimBlock>>>(d_particles, d_localExtForce);
-  cudaMemcpy(particles, d_particles, sizeof(Particle) * size, cudaMemcpyDeviceToHost);
+  updateParticleKernel<<<dimGrid, dimBlock>>>(d_particles, d_localExtForce,
+                                              d_gridCounter, d_gridCells);
+
+  if (cudaMemcpy(particles, d_particles, 
+                 sizeof(Particle) * size, 
+                 cudaMemcpyDeviceToHost) != cudaSuccess) {
+    printf("didn't memcpy back\n");
+  }
 
   free(gridCounter);
   free(gridCells);
@@ -86,92 +91,175 @@ void updateParticles(Particle *particles, int size, my_vec3 localExtForce) {
 void updateGrid(Particle *particles, int *gridCounter, int *gridCells) {
   unsigned int idx;
   for (int x = 0; x < NUM_PARTICLES; x++) {
-    idx = (particles[x].position.z + 25) * 51 * 51 + 
-          (particles[x].position.y + 25) * 51 + 
-          (particles[x].position.x + 25);
+    
+    particles[x].cell.x = floor(particles[x].position.x + 26);
+    particles[x].cell.y = floor(particles[x].position.y + 26);
+    particles[x].cell.z = floor(particles[x].position.z + 26);
+    idx = particles[x].cell.z * 53 * 53 + 
+          particles[x].cell.y * 53 + 
+          particles[x].cell.x;
+    // printf("got here too: %d, %f, %f, %f\n", idx, particles[x].position.x, particles[x].position.y, particles[x].position.z);
     if (gridCounter[idx] < 4) {
       gridCells[idx * 4 + gridCounter[idx]] = x;
       gridCounter[idx]++;
     }
+    //printf("got here\n");
   }
 }
 
-__global__ void updateParticleInCells(Particle *particles, int *gridCounter, int *gridCells) {
-  int partArr[4];
+__global__ void updateParticleKernel(Particle *particles, my_vec3 *extForce,
+                                     int *gridCounter, int *gridCells) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  int max = gridCounter[idx];
-  float velocityArr[12];
-  float velocityX = 0;
-  float velocityY = 0;
-  float velocityZ = 0;
 
-  for (int x = 0; x < max; x++) {
-    partArr[x] = gridCells[idx * 4 + x];
+  particles[idx].velocity.x = particles[idx].newVelocity.x;
+  particles[idx].velocity.y = particles[idx].newVelocity.y;
+  particles[idx].velocity.z = particles[idx].newVelocity.z;
+
+  particles[idx].newVelocity.x += extForce->x * DELTA_TIME;
+  particles[idx].newVelocity.y += extForce->y * DELTA_TIME;
+  particles[idx].newVelocity.z += extForce->z * DELTA_TIME;
+
+  updateParticleInCells(particles, gridCounter, 
+                        gridCells, idx);
+
+  particles[idx].position.x += particles[idx].newVelocity.x * DELTA_TIME;
+  particles[idx].position.y += particles[idx].newVelocity.y * DELTA_TIME;
+  particles[idx].position.z += particles[idx].newVelocity.z * DELTA_TIME;
+
+  if (particles[idx].position.y != particles[idx].position.y) {
+    particles[idx].position.y = 0;
+    particles[idx].velocity.y = 0;
+    printf("So sad\n");
+  }
+  if (particles[idx].position.x != particles[idx].position.x) {
+    particles[idx].position.x = 0;
+    particles[idx].velocity.x = 0;
+    printf("So  soooooo sad\n");
+  }
+  if (particles[idx].position.z != particles[idx].position.z) {
+    particles[idx].position.z = 0;
+    particles[idx].velocity.z = 0;
+    printf("Much sad\n");
   }
 
-  for (int x = 0; x < max; x++) {
-    for (int z = 0; z < max; z++) {
-      if (x != z) {
-        velocityX += particles[partArr[z]].velocity.x;
-        velocityY += particles[partArr[z]].velocity.y;
-        velocityZ += particles[partArr[z]].velocity.z;
+  if (particles[idx].position.y < BOTTOM_BOUND + RADIUS) {
+    particles[idx].position.y = BOTTOM_BOUND + RADIUS;
+    particles[idx].newVelocity.y *= -0.5;
+  }
+  else if (particles[idx].position.y > TOP_BOUND - RADIUS) {
+    particles[idx].position.y = TOP_BOUND - RADIUS;
+    particles[idx].newVelocity.y *= -0.5;
+  }
+  if (particles[idx].position.x < LEFT_BOUND + RADIUS) {
+    particles[idx].position.x = LEFT_BOUND + RADIUS;
+    particles[idx].newVelocity.x *= -0.5;
+  }
+  else if (particles[idx].position.x > RIGHT_BOUND - RADIUS) {
+    particles[idx].position.x = RIGHT_BOUND - RADIUS;
+    particles[idx].newVelocity.x *= -0.5;
+  }
+  if (particles[idx].position.z < BACK_BOUND + RADIUS) {
+    particles[idx].position.z = BACK_BOUND + RADIUS;
+    particles[idx].newVelocity.z *= -0.5;
+  }
+  else if (particles[idx].position.z > FRONT_BOUND - RADIUS) {
+    particles[idx].position.z = FRONT_BOUND - RADIUS;
+    particles[idx].newVelocity.z *= -0.5;
+  }
+}
+
+__device__ void updateParticleInCells(Particle *particles, int *gridCounter, 
+                                      int *gridCells, int idx) {
+  my_vec3 force;
+  my_vec3 tmpForce;
+  force.x = 0;
+  force.y = 0;
+  force.z = 0;
+
+  for (int z = -1; z < 2; z++) {
+    for (int y = -1; y < 2; y++) {
+      for (int x = -1; x < 2; x++) {
+        tmpForce = checkCells(particles[idx].cell.x + x, 
+                              particles[idx].cell.y + y, 
+                              particles[idx].cell.z + z, 
+                              idx, 
+                              particles, 
+                              gridCounter, 
+                              gridCells);
+        force.x += tmpForce.x;
+        force.y += tmpForce.y;
+        force.z += tmpForce.z;
       }
     }
-    if (max > 1) {
-      velocityArr[x * 3] = velocityX;
-      velocityArr[x * 3 + 1] = velocityY;
-      velocityArr[x * 3 + 2] = velocityZ;
-      velocityX = 0;
-      velocityY = 0;
-      velocityZ = 0;
-    }
   }
-
-  for (int x = 0; x < max; x++) {
-    if(max > 1) {
-      particles[partArr[x]].velocity.x = velocityArr[x * 3];
-      particles[partArr[x]].velocity.y = velocityArr[x * 3 + 1];
-      particles[partArr[x]].velocity.z = velocityArr[x * 3 + 2];
-    }
-  }
+  particles[idx].newVelocity.x += force.x;
+  particles[idx].newVelocity.y += force.y;
+  particles[idx].newVelocity.z += force.z;
 }
 
-__global__ void updateParticleKernel(Particle *particles, my_vec3 *extForce) {
-  float deltaTime = 0.1;
-  int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  Particle part = particles[idx];
+__device__ my_vec3 checkCells(int x, int y, int z, int idx,
+                           Particle *particles, 
+                           int *gridCounter,
+                           int *gridCells) {
+  int cellId = z * 53 * 53 + y * 53 + x;
+  int max = gridCounter[cellId];
+  int comparePartIdx;
+  float checkRadius;
+  float firstDot;
+  float dist;
+  my_vec3 v_ab;
+  my_vec3 col_normal;
+  my_vec3 force;
 
-  part.velocity.x = part.velocity.x + extForce->x * deltaTime;
-  part.velocity.y = part.velocity.y + extForce->y * deltaTime;
-  part.velocity.z = part.velocity.z + extForce->z * deltaTime;
+  force.x = 0;
+  force.y = 0;
+  force.z = 0;
 
-  part.position.x = part.position.x + part.velocity.x * deltaTime;
-  part.position.y = part.position.y + part.velocity.y * deltaTime;
-  part.position.z = part.position.z + part.velocity.z * deltaTime;
+  cellId *= 4;
+  for (int i = 0; i < max; i++) {
+    comparePartIdx = gridCells[cellId + i];
+    if (comparePartIdx != idx) {
+      checkRadius = particles[idx].radius + particles[comparePartIdx].radius;
+      dist = circleDistance(&particles[idx].position, &particles[comparePartIdx].position);
+      dist = sqrt(dist);
+      if (checkRadius > dist) {
+        v_ab.x = particles[comparePartIdx].velocity.x - particles[idx].velocity.x;
+        v_ab.y = particles[comparePartIdx].velocity.y - particles[idx].velocity.y;
+        v_ab.z = particles[comparePartIdx].velocity.z - particles[idx].velocity.z;
+        
+        col_normal.x = particles[comparePartIdx].position.x - particles[idx].position.x; 
+        col_normal.y = particles[comparePartIdx].position.y - particles[idx].position.y; 
+        col_normal.z = particles[comparePartIdx].position.z - particles[idx].position.z;
+        
+        if (dist > 0) {
+          col_normal.x /= dist;
+          col_normal.y /= dist;
+          col_normal.z /= dist;
+          firstDot = v_ab.x * col_normal.x + 
+                     v_ab.y * col_normal.y + 
+                     v_ab.z * col_normal.z;
 
-  if (part.position.y <= BOTTOM_BOUND) {
-    part.position.y = BOTTOM_BOUND;
-    part.velocity.y = -part.velocity.y/10000.0;
+          force.x = -0.005 * (checkRadius - dist) * col_normal.x;
+          force.y = -0.005 * (checkRadius - dist) * col_normal.y;
+          force.z = -0.005 * (checkRadius - dist) * col_normal.z;
+
+          force.x += v_ab.x * 0.01; 
+          force.y += v_ab.y * 0.01; 
+          force.z += v_ab.z * 0.01;
+
+          force.x += 0.1 * (v_ab.x - firstDot * col_normal.x); 
+          force.y += 0.1 * (v_ab.y - firstDot * col_normal.y); 
+          force.z += 0.1 * (v_ab.z - firstDot * col_normal.z);
+        }
+      }
+    }
   }
-  if (part.position.y >= TOP_BOUND) {
-    part.position.y = TOP_BOUND;
-    part.velocity.y = -part.velocity.y/10000.0;
-  }
-  if (part.position.x <= LEFT_BOUND) {
-    part.position.x = LEFT_BOUND;
-    part.velocity.x = -part.velocity.x/10000.0;
-  }
-  if (part.position.x >= RIGHT_BOUND) {
-    part.position.x = RIGHT_BOUND;
-    part.velocity.x = -part.velocity.x/10000.0;
-  }
-  if (part.position.z <= BACK_BOUND) {
-    part.position.z = BACK_BOUND;
-    part.velocity.z = -part.velocity.z/10000.0;
-  }
-  if (part.position.z >= FRONT_BOUND) {
-    part.position.z = FRONT_BOUND;
-    part.velocity.z = -part.velocity.z/10000.0;
-  }
-  particles[idx] = part;
+  return force;
+}
+
+__device__ float circleDistance(my_vec3 *firstSphere, my_vec3 *secondSphere) {
+  float xDist = firstSphere->x - secondSphere->x;
+  float yDist = firstSphere->y - secondSphere->y;
+  float zDist = firstSphere->z - secondSphere->z;
+  return xDist * xDist + yDist * yDist + zDist * zDist; 
 }
