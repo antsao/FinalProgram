@@ -25,14 +25,14 @@ void ParticleSystem::initalize() {
   int particleCount = 1;
   
   for (int i = 0; i < NUM_PARTICLES; i++) {
-    if (particleCount % 51 == 0) {
+    if (particleCount % 26 == 0) {
       particleZPos = 25;
-      if (particleXPos != 25) {
-        particleXPos += 2;
+      if (particleXPos != 0) {
+        particleXPos++;
       }
       else {
         particleXPos = -25;
-        particleYPos -= 2;
+        particleYPos--;
         particleZPos = 25;
       }
     }
