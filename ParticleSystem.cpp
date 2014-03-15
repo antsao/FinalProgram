@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "Fluid.h"
 #include "ParticleUpdate.h"
-
+#include "SerialUpdate.h"
 #define SIDES 32
 
 // MEMBERS
@@ -30,11 +30,19 @@ void ParticleSystem::initalize() {
     if (particleCount % (SIDES + 1) == 0) {
       particleXPos = -SIDES;
       if (particleZPos != -SIDES) {
+        #ifdef ENABLE_CUDA
         particleZPos--;
+        #else
+        particleZPos -=2;
+        #endif
       }
       else {
         particleZPos = SIDES;
+        #ifdef ENABLE_CUDA
         particleYPos-=2;
+        #else
+        particleYPos-=5;
+        #endif
       }
     }
     else {
@@ -43,9 +51,15 @@ void ParticleSystem::initalize() {
     particles[i].position.x = particleXPos;
     particles[i].position.y = particleYPos;
     particles[i].position.z = particleZPos;
+    #ifdef ENABLE_CUDA
     particles[i].velocity.x = 0;
     particles[i].velocity.y = 0;
     particles[i].velocity.z = 0;
+    #else
+    particles[i].velocity.x = rand()%2 - rand()/(float)RAND_MAX;
+    particles[i].velocity.y = -rand()/(float)RAND_MAX;
+    particles[i].velocity.z = rand()%2 - rand()/(float)RAND_MAX;
+    #endif
     particles[i].newVelocity.x = 0;
     particles[i].newVelocity.y = 0;
     particles[i].newVelocity.z = 0;
@@ -55,7 +69,6 @@ void ParticleSystem::initalize() {
 }
 
 void ParticleSystem::update(float deltaTime) {
-  #ifdef ENABLE_CUDA
     my_vec3 gravity;
     gravity.x = 0.0f;
     gravity.y = -0.3f;
@@ -66,8 +79,10 @@ void ParticleSystem::update(float deltaTime) {
     wind.y = 0.0f;
     wind.z = 0.0f;
 
+  #ifdef ENABLE_CUDA
     updateParticles(particles, NUM_PARTICLES, gravity);
   #else
-  //Implement CPU Version
+    gravity.y = -2.3f;
+    updateParticlesS(particles, NUM_PARTICLES, gravity);
   #endif
 }

@@ -10,8 +10,13 @@
 #define GRAVITY 1
 #define NO_COLLISION 2
 
+#ifdef ENABLE_CUDA
 #define NUM_PARTICLES 16384//32768
 #define RADIUS 0.75
+#else
+#define NUM_PARTICLES 3000
+#define RADIUS 0.25
+#endif
 
 typedef struct my_vec3{
   float x, y, z;
@@ -31,6 +36,9 @@ typedef struct Particle{
   my_vec3 velocity;
   my_vec3i cell;
   float radius;
+  #ifndef ENABLE_CUDA
+  int hit;
+  #endif
 } Particle;
 
 class ParticleSystem{
